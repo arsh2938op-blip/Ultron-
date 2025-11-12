@@ -3,1018 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ULTRON 1 - Multi-Modal Assistant</title>
+    <title>Ultron AI Chatbot</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #1f2937; /* Dark background */
+            background-color: #f3f4f6;
         }
-        #main-layout {
-            height: 95vh;
-            display: flex;
-            border-radius: 12px;
-            overflow: hidden;
-            background-color: #2c3e50;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        /* Custom scrollbar for chat history */
+        #chat-history::-webkit-scrollbar {
+            width: 6px;
         }
-        .sidebar {
-            width: 280px;
-            min-width: 240px;
-            background-color: #1a202c; /* Even darker for sidebar */
-            border-right: 1px solid #374151;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            transition: all 0.3s ease-in-out;
+        #chat-history::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+            border-radius: 3px;
         }
-        .sidebar-minimized {
-            width: 0 !important;
-            min-width: 0 !important;
-            padding: 0 !important;
-            border-right: none;
-        }
-        .chat-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease-in-out;
-        }
-        .message-bubble {
-            max-width: 90%;
-            padding: 10px 15px;
-            border-radius: 15px;
-            margin-bottom: 10px;
-            word-wrap: break-word;
-            position: relative; /* For the edit icon positioning */
+        .bot-message {
+            background-color: #ffffff;
+            border-left: 3px solid #10b981;
         }
         .user-message {
-            background-color: #3498db;
-            color: white;
-            align-self: flex-end;
-            border-top-right-radius: 0;
-            margin-left: auto; /* Push to the right */
+            background-color: #e0f2f1;
+            border-right: 3px solid #047857;
         }
-        .gemini-message {
-            background-color: #3f51b5; /* Deeper blue for Ultron 1 */
-            color: white;
-            align-self: flex-start;
-            border-top-left-radius: 0;
-            margin-right: auto; /* Push to the left */
+        /* Loading animation for the waiting state */
+        .dot-flashing {
+          position: relative;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #10b981;
+          color: #10b981;
+          animation: dot-flashing 1s infinite alternate;
+          animation-delay: 0s;
         }
-        .input-area {
-            background-color: #1f2937;
+        .dot-flashing::before, .dot-flashing::after {
+          content: '';
+          display: inline-block;
+          position: absolute;
+          top: 0;
         }
-        .mic-active {
-            animation: pulse-green 1s infinite;
+        .dot-flashing::before {
+          left: -12px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #10b981;
+          color: #10b981;
+          animation: dot-flashing 1s infinite alternate;
+          animation-delay: 0.3s;
         }
-        @keyframes pulse-green {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            }
-            50% {
-                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-            }
+        .dot-flashing::after {
+          left: 12px;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background-color: #10b981;
+          color: #10b981;
+          animation: dot-flashing 1s infinite alternate;
+          animation-delay: 0.6s;
         }
-        /* Mobile adjustments: Sidebar is always minimized by default on small screens */
-        @media (max-width: 768px) {
-            .sidebar {
-                position: absolute;
-                height: 95vh;
-                left: 0;
-                z-index: 10;
-                /* On mobile, we rely on sidebar-minimized to fully hide it */
-            }
+        @keyframes dot-flashing {
+          0% { opacity: 0.2; }
+          100% { opacity: 1; }
         }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4">
 
-    <div id="main-layout" class="w-full max-w-7xl">
-        <!-- Sidebar for History -->
-        <aside id="sidebar" class="sidebar">
-            <div class="p-4 border-b border-gray-700">
-                <button onclick="startNewChat()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    New Chat
+    <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl flex flex-col h-[90vh]">
+        <!-- Header -->
+        <header class="p-4 bg-emerald-600 text-white rounded-t-xl shadow-md">
+            <h1 class="text-2xl font-bold">Ultron Chat Interface</h1>
+            <p class="text-sm opacity-90">Powered by Gemini AI</p>
+        </header>
+
+        <!-- Chat History -->
+        <div id="chat-history" class="flex-grow p-4 space-y-4 overflow-y-auto">
+            <!-- Initial Message -->
+            <div class="flex justify-start">
+                <div class="bot-message max-w-xs md:max-w-md p-3 rounded-lg shadow-sm text-gray-700">
+                    <p>Hello! I am Ultron. Ask me anything, and I'll do my best to help you.</p>
+                </div>
+            </div>
+            <!-- Dynamic messages will be added here -->
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 border-t border-gray-200">
+            <div id="loading-indicator" class="hidden justify-start mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="dot-flashing"></div>
+                    <span class="text-sm text-gray-500">Ultron is thinking...</span>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <textarea 
+                    id="user-input" 
+                    rows="1" 
+                    placeholder="Type your message here..."
+                    class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 transition duration-150 resize-none"
+                    oninput="autoExpand(this)"
+                    onkeypress="handleKeyPress(event)"
+                ></textarea>
+                <button 
+                    id="send-button"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-150 shadow-md disabled:opacity-50"
+                    onclick="sendMessage()"
+                >
+                    Send
                 </button>
             </div>
-            
-            <h3 class="px-4 pt-4 pb-2 text-xs font-semibold uppercase text-gray-400 sidebar-content">Chat History</h3>
-
-            <div id="chat-history-list" class="flex-1 overflow-y-auto px-2 space-y-1 sidebar-content">
-                <!-- History items will be injected here -->
-            </div>
-            
-        </aside>
-
-        <!-- Main Chat Content -->
-        <div id="app" class="chat-content">
-            <!-- Header -->
-            <header class="p-4 bg-gray-800 text-white shadow-lg flex items-start justify-between">
-                <div class="flex items-center">
-                    <!-- Sidebar Toggle Button -->
-                    <button id="sidebar-toggle-btn" onclick="toggleSidebar()" class="text-white hover:text-red-400 p-2 mr-2 rounded-full transition duration-150" title="Toggle Sidebar">
-                        <!-- Menu/Hamburger Icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="3" y1="12" x2="21" y2="12"></line>
-                            <line x1="3" y1="6" x2="21" y2="6"></line>
-                            <line x1="3" y1="18" x2="21" y2="18"></line>
-                        </svg>
-                    </button>
-
-                    <h1 id="chat-title" class="text-xl font-extrabold flex items-center">
-                        <span class="text-red-500 text-3xl mr-2">🤖</span> ULTRON 1: <span class="ml-2 font-light text-gray-300 truncate max-w-sm">New Chat</span>
-                    </h1>
-                </div>
-                
-                <div class="flex flex-wrap items-center space-x-2 sm:space-x-4">
-                    <!-- Hotkey Tip -->
-                    <p class="text-xs text-gray-500 hidden sm:block">Focus Input: <kbd class="bg-gray-700 text-gray-200 px-1 rounded">Ctrl</kbd>+<kbd class="bg-gray-700 text-gray-200 px-1 rounded">Alt</kbd>+<kbd class="bg-gray-700 text-gray-200 px-1 rounded">U</kbd></p>
-
-                    <!-- Language Selection -->
-                    <div class="flex items-center space-x-2 mb-2 sm:mb-0">
-                        <label for="language-select" class="text-sm font-semibold text-gray-400">Language:</label>
-                        <select id="language-select" class="bg-gray-700 text-white rounded-lg p-1 text-sm focus:ring-red-500 focus:border-red-500" onchange="updateLanguage()">
-                            <option value="English">English</option>
-                            <option value="Spanish">Spanish</option>
-                            <option value="French">French</option>
-                            <option value="German">German</option>
-                            <option value="Hindi">Hindi</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Voice Selection -->
-                    <div class="flex items-center space-x-2">
-                        <label for="voice-select" class="text-sm font-semibold text-gray-400">Voice:</label>
-                        <select id="voice-select" class="bg-gray-700 text-white rounded-lg p-1 text-sm focus:ring-red-500 focus:border-red-500" onchange="updateVoice()">
-                            <option value="Aoede" selected>Bright (Female-leaning)</option>
-                            <option value="Kore">Firm (Male-leaning)</option>
-                        </select>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Messages Area -->
-            <main id="chat-messages" class="flex-1 p-4 space-y-4 overflow-y-auto"></main>
-
-            <!-- Image Display Area (Hidden by Default) -->
-            <div id="image-display" class="p-4 bg-gray-900 border-t border-gray-700 hidden">
-                <h3 class="text-sm font-bold text-gray-300 mb-2">Generated Image:</h3>
-                <div class="flex justify-center">
-                    <img id="generated-image-output" class="max-w-full h-auto rounded-lg shadow-xl" alt="Generated image" onerror="this.onerror=null;this.src='https://placehold.co/400x400/374151/ffffff?text=Image+Failed+to+Load';">
-                </div>
-            </div>
-            
-            <!-- Image Preview Area -->
-            <div id="image-preview-area" class="p-3 bg-gray-700 border-t border-gray-600 hidden">
-                <div class="flex items-center justify-between">
-                    <img id="selected-image-preview" class="h-16 w-16 object-cover rounded-md mr-3" alt="Selected Image Preview">
-                    <p id="image-filename" class="text-sm text-gray-300 truncate flex-1"></p>
-                    <button onclick="clearImage()" class="text-red-400 hover:text-red-500 font-semibold text-sm ml-2 px-2 py-1 bg-gray-800 rounded-md">
-                        Clear Image (X)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Input and Controls -->
-            <div class="input-area p-4 border-t border-gray-700">
-                <div id="loader" class="text-red-400 text-center mb-2 hidden font-semibold">
-                    <span id="loader-text">🤖 Thinking...</span>
-                </div>
-                <div id="audio-controls" class="mb-3 text-center hidden">
-                    <button onclick="playTTS(lastResponseText)" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-full transition duration-150 shadow-lg text-sm">
-                        🔊 Hear Response
-                    </button>
-                </div>
-                <div class="flex space-x-2">
-                    <!-- Hidden File Input -->
-                    <input type="file" id="image-upload" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
-                    
-                    <!-- Vision Button -->
-                    <button onclick="document.getElementById('image-upload').click()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold p-3 rounded-lg shadow-md transition duration-150 flex items-center justify-center w-12 h-auto" title="Upload an Image for Vision">
-                        <!-- Eye Icon SVG -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                    
-                    <!-- Speak Button -->
-                    <button id="speak-button" onclick="startSTT()" class="bg-green-600 hover:bg-green-700 text-white font-bold p-3 rounded-lg shadow-md transition duration-150 flex items-center justify-center w-12 h-auto">
-                        <!-- Basic Microphone SVG Icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                          <path fill-rule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4z" clip-rule="evenodd" />
-                          <path d="M5.5 8A6.5 6.5 0 0112 11.5v2A6.5 6.5 0 015.5 13V8zm0 5a.5.5 0 011 0v1.5a4.5 4.5 0 009 0V13a.5.5 0 011 0v1.5A5.5 5.5 0 0110 19a5.5 5.5 0 01-4.5-5.5V13z" />
-                        </svg>
-                    </button>
-                    
-                    <input type="text" id="user-input" placeholder="Type or speak (e.g., 'What is in this picture?')" 
-                           class="flex-1 p-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-red-500">
-                    <button onclick="handleSend()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-150">
-                        Send
-                    </button>
-                </div>
-            </div>
+            <p id="error-message" class="text-sm text-red-500 mt-2 hidden">An error occurred. Please check your API key or network connection.</p>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const TEXT_MODEL = "gemini-2.5-flash-preview-09-2025"; 
-        const TTS_MODEL = "gemini-2.5-flash-preview-tts"; 
-        const IMAGE_MODEL = "gemini-2.5-flash-image-preview"; 
-        const VISION_MODEL = "gemini-2.5-flash-preview-09-2025";
-        const INTENT_TAG = "<INTENT_PLAY_AUDIO>";
-        const apiKey = ""; // Canvas will automatically provide the key at runtime
-        const ASSISTANT_NAME = "Ultron 1";
-        
-        // --- HISTORY STATE ---
-        let chatHistory = []; // History for the currently loaded chat
-        let chats = [];       // Array of all chats loaded from localStorage
-        let currentChatId = null; // ID of the currently active chat
-        let isSidebarOpen = true; // State for sidebar visibility
-        
-        let systemInstruction = "";
-        let selectedLanguage = "English";
-        let selectedVoiceName = "Aoede"; 
-        let lastResponseText = "";
-        
-        // --- STT & AUDIO STATE ---
-        let recognition = null;
-        let isRecording = false;
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // --- VISION STATE ---
-        let selectedImageBase64 = null;
-        let selectedImageMimeType = null;
+        // API Key INJECTION FIX: This key should now resolve the 403 error.
+        // NOTE: Putting an API key directly in public client-side code is a security risk. 
+        // For production, you should use a backend proxy.
+        const apiKey = "AIzaSyCoccMDLQeQ4GxsbYeVuz93Avgl8iVyjJw";
+        const model = "gemini-2.5-flash-preview-09-2025";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-        // Firebase Setup (Standard requirement for Canvas apps - included for completeness)
-        // These variables are typically provided by the environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        // Role-setting for the AI
+        const systemPrompt = "You are Ultron, a helpful, advanced, and slightly dry AI assistant. Keep your responses concise and accurate.";
+        
+        // This array will store the conversation history
+        let chatHistory = [];
+        let isWaitingForResponse = false;
+        
+        const chatHistoryDiv = document.getElementById('chat-history');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const errorMessage = document.getElementById('error-message');
 
-        // --- HISTORY MANAGEMENT ---
-
-        function loadHistory() {
-            try {
-                const storedChats = localStorage.getItem('ultron_chats');
-                if (storedChats) {
-                    // Sort by timestamp (newest first)
-                    chats = JSON.parse(storedChats).sort((a, b) => b.timestamp - a.timestamp);
-                } else {
-                    chats = [];
-                }
-            } catch (e) {
-                console.error("Error loading chat history from localStorage:", e);
-                chats = [];
-            }
-            renderHistory();
+        // Utility to auto-expand textarea height
+        function autoExpand(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
         }
 
-        function saveHistory() {
-            try {
-                localStorage.setItem('ultron_chats', JSON.stringify(chats));
-                renderHistory();
-            } catch (e) {
-                console.error("Error saving chat history to localStorage:", e);
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault(); // Prevent new line
+                sendMessage();
             }
         }
 
-        function saveChat(newTitle) {
-            // Find the current chat index
-            const index = chats.findIndex(c => c.id === currentChatId);
+        // Add a message bubble to the chat history
+        function addMessage(text, sender) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
 
-            // We need to strip the base64 image data from history before saving
-            // History only needs to contain text parts for model context
-            const historyToSave = chatHistory.map(msg => {
-                const parts = msg.parts.map(part => {
-                    // Only keep text parts for serialization
-                    if (part.text) return { text: part.text };
-                    return null;
-                }).filter(part => part !== null);
-                
-                return { role: msg.role, parts: parts };
-            });
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `max-w-xs md:max-w-md p-3 rounded-lg shadow-md text-gray-800 ${sender === 'user' ? 'user-message' : 'bot-message'}`;
+            messageBubble.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Basic markdown bolding
 
-            if (index !== -1) {
-                // Update existing chat
-                chats[index].history = historyToSave;
-                if (newTitle) {
-                    chats[index].title = newTitle;
-                    document.getElementById('chat-title').querySelector('span:last-child').textContent = newTitle;
-                }
-                chats[index].timestamp = Date.now(); // Update timestamp for sorting
-            } else if (historyToSave.length > 0) {
-                // Should only happen for the very first save of a new chat
-                const title = newTitle || "Untitled Chat";
-                const newChat = {
-                    id: currentChatId,
-                    title: title,
-                    timestamp: Date.now(),
-                    history: historyToSave
-                };
-                chats.unshift(newChat); // Add to the beginning
-                document.getElementById('chat-title').querySelector('span:last-child').textContent = title;
-            }
-
-            saveHistory(); // Write the entire array back to storage
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('chat-history-list');
-            list.innerHTML = '';
+            messageContainer.appendChild(messageBubble);
+            chatHistoryDiv.appendChild(messageContainer);
             
-            if (chats.length === 0) {
-                 list.innerHTML = '<p class="text-gray-500 text-xs px-2 py-3">No chat history yet. Start a conversation!</p>';
-                 return;
-            }
-
-            chats.forEach(chat => {
-                const button = document.createElement('button');
-                button.className = `w-full text-left p-3 rounded-lg text-sm truncate transition duration-150 ${chat.id === currentChatId ? 'bg-gray-700 text-white font-semibold' : 'hover:bg-gray-700 text-gray-300'}`;
-                button.textContent = chat.title;
-                button.onclick = () => loadChat(chat.id);
-                list.appendChild(button);
-            });
+            // Scroll to the bottom
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
         }
 
-        function loadChat(id) {
-            const chatToLoad = chats.find(c => c.id === id);
-            
-            if (chatToLoad) {
-                currentChatId = id;
-                // Since we only save text parts, the loaded history is clean
-                chatHistory = JSON.parse(JSON.stringify(chatToLoad.history)); 
-                
-                // Clear UI
-                document.getElementById('chat-messages').innerHTML = '';
-                document.getElementById('image-display').classList.add('hidden');
-                document.getElementById('user-input').value = "";
-                clearImage(false); 
-
-                // Render history
-                chatHistory.forEach((msg, index) => {
-                    const text = msg.parts[0].text;
-                    appendMessage(msg.role, text, false, false, index);
-                });
-
-                // Update title and selection
-                document.getElementById('chat-title').querySelector('span:last-child').textContent = chatToLoad.title;
-                renderHistory(); 
-                
+        // Update UI state (loading/enabled)
+        function setUiState(isLoading) {
+            isWaitingForResponse = isLoading;
+            userInput.disabled = isLoading;
+            sendButton.disabled = isLoading;
+            if (isLoading) {
+                loadingIndicator.classList.remove('hidden');
+                loadingIndicator.classList.add('flex');
             } else {
-                startNewChat(); // Fallback to new chat if ID is not found
+                loadingIndicator.classList.remove('flex');
+                loadingIndicator.classList.add('hidden');
             }
         }
 
-        // --- SIDEBAR TOGGLE ---
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const sidebarContents = document.querySelectorAll('.sidebar-content');
-            
-            isSidebarOpen = !isSidebarOpen;
+        // Exponential backoff logic for retries
+        async function fetchWithRetry(url, payload, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            sidebar.classList.toggle('sidebar-minimized', !isSidebarOpen);
-            
-            // Hide content instantly when minimizing to avoid overflow
-            sidebarContents.forEach(el => {
-                el.style.display = isSidebarOpen ? '' : 'none';
-            });
-        }
+                    if (response.status === 403) {
+                         // Specific check for 403 to skip retry and throw a clear error
+                         throw new Error("API Key Forbidden (403). Check key validity and restrictions.");
+                    }
 
-        // --- UI & STATE MANAGEMENT ---
+                    if (!response.ok) {
+                        const errorBody = await response.json();
+                        console.error("API Error Response:", errorBody);
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
 
-        function setLoader(text, show = true, type = 'thinking') {
-            const loader = document.getElementById('loader');
-            const loaderText = document.getElementById('loader-text');
-            loaderText.textContent = text;
-            loader.classList.toggle('hidden', !show);
-            
-            // Change color based on type
-            loader.classList.remove('text-red-400', 'text-green-400', 'text-yellow-400', 'text-purple-400');
-            if (type === 'recording') {
-                loader.classList.add('text-green-400');
-            } else if (type === 'error') {
-                loader.classList.add('text-red-400');
-            } else if (type === 'vision') {
-                loader.classList.add('text-purple-400');
-            } else { // default 'thinking' or 'playing'
-                loader.classList.add('text-yellow-400');
+                    return await response.json();
+
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed:`, error);
+                    if (i === retries - 1 || error.message.includes("403")) {
+                        throw error;
+                    }
+                    // Wait with exponential backoff
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
             }
         }
 
-        function setAudioControls(show = true) {
-            document.getElementById('audio-controls').classList.toggle('hidden', !show);
-        }
+        // Main function to send message and get response
+        async function sendMessage() {
+            if (isWaitingForResponse) return;
 
-        function appendMessage(sender, text, isAudioPlayed = false, shouldScroll = true, historyIndex = null) {
-            const messages = document.getElementById('chat-messages');
-            const msgDiv = document.createElement('div');
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Clear any previous error messages
+            errorMessage.classList.add('hidden');
+
+            // 1. Display user message and clear input
+            addMessage(message, 'user');
+            userInput.value = '';
+            autoExpand(userInput);
+
+            // 2. Add user message to history
+            chatHistory.push({ role: "user", parts: [{ text: message }] });
             
-            // Apply text and strip intent tag if present
-            const cleanText = text.replace(INTENT_TAG, "").trim();
+            // 3. Set UI to loading
+            setUiState(true);
 
-            msgDiv.classList.add('message-bubble', sender === 'user' ? 'user-message' : 'gemini-message', 'flex', 'flex-col');
-            msgDiv.innerHTML = `
-                <div class="flex items-center mb-1 text-xs font-bold ${sender === 'user' ? 'justify-end' : 'justify-start'}">
-                    ${sender === 'user' ? 'You' : ASSISTANT_NAME}
-                </div>
-                <div class="text-sm">${cleanText}</div>
-            `;
-            
-            if (sender === 'gemini' && isAudioPlayed) {
-                msgDiv.querySelector('.text-sm').innerHTML += ' <span class="text-yellow-300 text-xs">🔊 Played</span>';
-            }
-            
-            // ADD RESUBMIT/EDIT BUTTON FOR USER MESSAGES
-            if (sender === 'user' && historyIndex !== null) {
-                const resubmitButton = document.createElement('button');
-                resubmitButton.className = 'text-gray-200 hover:text-white p-1 rounded-full absolute -top-1 -left-6 transform -translate-y-1/2 transition duration-150 hidden sm:block';
-                resubmitButton.setAttribute('title', 'Resubmit/Edit Message (Copies text to input)');
-                resubmitButton.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-1.414 7.05a.5.5 0 01.353.147l2.828 2.829a.5.5 0 01-.707.707l-2.828-2.828a.5.5 0 01.354-.854zm-8.485 5.656l2.121-2.121 2.828 2.828-2.121 2.121a.5.5 0 01-.707 0l-.353-.353a.5.5 0 010-.707zM15 11.5a.5.5 0 01-.5.5H5.707l2.121 2.121a.5.5 0 010 .707L6.5 16.5a.5.5 0 01-.707 0L3.5 14.207a.5.5 0 010-.707L13.793 3.793a.5.5 0 01.707 0l.353.353a.5.5 0 010 .707L15 5.707V11.5z"/>
-                    </svg>
-                `;
-                resubmitButton.onclick = () => resubmitMessage(cleanText);
-                msgDiv.appendChild(resubmitButton);
-            }
-
-
-            messages.appendChild(msgDiv);
-            if(shouldScroll) {
-                messages.scrollTop = messages.scrollHeight; // Scroll to bottom
-            }
-        }
-
-        function resubmitMessage(text) {
-            document.getElementById('user-input').value = text;
-            document.getElementById('user-input').focus();
-            // Optional: Provide a hint that they can edit
-            setLoader("Text loaded for editing. Adjust as needed and click Send.", true, 'error');
-            setTimeout(() => setLoader("", false), 2000);
-        }
-
-        function updateVoice() {
-            const oldVoice = selectedVoiceName;
-            selectedVoiceName = document.getElementById('voice-select').value;
-            
-            if (oldVoice === selectedVoiceName) return;
-
-            // Provide feedback on voice change
-            const voiceName = selectedVoiceName === 'Aoede' ? 'Bright (Female-leaning)' : 'Firm (Male-leaning)';
-            appendMessage('gemini', `Voice profile updated to **${voiceName}**. Try pressing the "Hear Response" button to test it!`, false);
-        }
-
-        /**
-         * Updates the language setting and re-initializes STT without clearing chat history.
-         */
-        function updateLanguage() {
-            const oldLanguage = selectedLanguage;
-            selectedLanguage = document.getElementById('language-select').value;
-            
-            if (oldLanguage === selectedLanguage) return; 
-
-            // 1. Re-setup STT for the new language code
-            setupSTT(); 
-            
-            // 2. Notify user but DO NOT clear chatHistory or UI
-            appendMessage('gemini', `Language updated from **${oldLanguage}** to **${selectedLanguage}**. I'll respond in ${selectedLanguage} from now on.`, false);
-        }
-
-        /**
-         * Starts a new conversation: resets history, clears UI, and provides initial message.
-         */
-        function startNewChat() {
-            selectedLanguage = document.getElementById('language-select').value;
-            selectedVoiceName = document.getElementById('voice-select').value;
-            
-            // --- CRITICAL HISTORY RESET ---
-            chatHistory = []; 
-            currentChatId = crypto.randomUUID(); // Assign new ID
-            
-            document.getElementById('chat-messages').innerHTML = '';
-            document.getElementById('image-display').classList.add('hidden');
-            document.getElementById('speak-button').classList.remove('mic-active');
-            clearImage(false); 
-            
-            // Set up STT for the initial language
-            setupSTT(); 
-            
-            const voiceName = selectedVoiceName === 'Aoede' ? 'Bright (Female-leaning)' : 'Firm (Male-leaning)';
-            document.getElementById('chat-title').querySelector('span:last-child').textContent = 'New Chat';
-            appendMessage('gemini', `Starting a **New Chat**. Language: **${selectedLanguage}**. Voice: **${voiceName}**. I am ${ASSISTANT_NAME}, ready to assist you.`, false);
-            
-            // Update sidebar appearance for the new chat
-            renderHistory();
-        }
-
-        // --- VISION HELPERS ---
-        
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]); 
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        async function handleImageSelect(event) {
-            const file = event.target.files[0];
-            if (!file) {
-                clearImage();
-                return;
-            }
-
-            if (file.size > 4 * 1024 * 1024) { 
-                // Using a custom modal/message box is preferred over alert()
-                setLoader("File is too large (max 4MB).", true, 'error');
-                setTimeout(() => setLoader("", false), 3000);
-                event.target.value = ''; 
-                clearImage();
-                return;
-            }
-            
-            try {
-                setLoader("📸 Processing image...", true, 'vision');
-                const base64Data = await fileToBase64(file);
-                
-                selectedImageBase64 = base64Data;
-                selectedImageMimeType = file.type;
-                
-                // Show preview
-                document.getElementById('selected-image-preview').src = URL.createObjectURL(file);
-                document.getElementById('image-filename').textContent = file.name;
-                document.getElementById('image-preview-area').classList.remove('hidden');
-                
-            } catch (error) {
-                console.error("Image Processing Error:", error);
-                setLoader("Failed to process image.", true, 'error');
-                setTimeout(() => setLoader("", false), 3000);
-                selectedImageBase64 = null;
-                selectedImageMimeType = null;
-            } finally {
-                setLoader("", false);
-            }
-        }
-
-        function clearImage(clearFileInput = true) {
-            selectedImageBase64 = null;
-            selectedImageMimeType = null;
-            document.getElementById('selected-image-preview').src = '';
-            document.getElementById('image-filename').textContent = '';
-            document.getElementById('image-preview-area').classList.add('hidden');
-            if (clearFileInput) {
-                document.getElementById('image-upload').value = '';
-            }
-        }
-
-
-        // --- STT IMPLEMENTATION (Web Speech API) ---
-
-        function setupSTT() {
-            // Get the two-letter language code (e.g., 'en', 'es') for STT
-            const langCodeMap = {
-                'English': 'en-US',
-                'Spanish': 'es-ES',
-                'French': 'fr-FR',
-                'German': 'de-DE',
-                'Hindi': 'hi-IN'
+            // Construct payload for the API call
+            const payload = {
+                contents: chatHistory,
+                // System instructions guide the AI's persona
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
             };
-            const langCode = langCodeMap[selectedLanguage] || 'en-US';
-
-            // Stop existing recognition if running
-            if (recognition && isRecording) {
-                recognition.stop();
-            }
-
-            if ('webkitSpeechRecognition' in window) {
-                recognition = new webkitSpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = langCode; 
-                
-                recognition.onstart = function() {
-                    isRecording = true;
-                    setLoader("🎙️ Listening...", true, 'recording');
-                    document.getElementById('speak-button').classList.add('mic-active');
-                };
-
-                recognition.onresult = function(event) {
-                    isRecording = false;
-                    setLoader("", false);
-                    document.getElementById('speak-button').classList.remove('mic-active');
-                    const transcription = event.results[0][0].transcript;
-                    document.getElementById('user-input').value = transcription;
-                    handleSend(transcription); 
-                };
-
-                recognition.onerror = function(event) {
-                    isRecording = false;
-                    // Only show error if it's not the 'not-allowed' error
-                    if (event.error !== 'not-allowed') {
-                       setLoader(`❌ Speech recognition error (${event.error}). Please try again.`, true, 'error');
-                       setTimeout(() => setLoader("", false), 3000);
-                    }
-                    document.getElementById('speak-button').classList.remove('mic-active');
-                    console.error('Speech Recognition Error:', event.error);
-                };
-
-                recognition.onend = function() {
-                    isRecording = false;
-                    document.getElementById('speak-button').classList.remove('mic-active');
-                    if (document.getElementById('loader').textContent.includes('Listening')) {
-                        setLoader("Did not hear anything. Try again.", true, 'error');
-                        setTimeout(() => setLoader("", false), 2000);
-                    }
-                };
-
-            } else {
-                appendMessage('gemini', '⚠️ Speech Recognition is not supported in this browser.', false);
-                document.getElementById('speak-button').disabled = true;
-                recognition = null;
-            }
-        }
-
-        function startSTT() {
-            if (!recognition) {
-                setupSTT();
-            }
-            if (!recognition) return; 
-            
-            if (isRecording) {
-                recognition.stop();
-                return;
-            }
-            document.getElementById('image-display').classList.add('hidden'); 
-            document.getElementById('user-input').value = ""; 
-            recognition.start();
-        }
-
-
-        // --- AUDIO HELPERS (REQUIRED FOR TTS PCM DATA) ---
-        const base64ToArrayBuffer = (base64) => {
-            const binaryString = atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes.buffer;
-        };
-
-        const pcmToWav = (pcmData, sampleRate) => {
-            const buffer = new ArrayBuffer(44 + pcmData.byteLength);
-            const view = new DataView(buffer);
-            let offset = 0;
-
-            function writeString(str) {
-                for (let i = 0; i < str.length; i++) {
-                    view.setUint8(offset + i, str.charCodeAt(i));
-                }
-                offset += str.length;
-            }
-
-            function writeUint32(val) {
-                view.setUint32(offset, val, true);
-                offset += 4;
-            }
-
-            function writeUint16(val) {
-                view.setUint16(offset, val, true);
-                offset += 2;
-            }
-
-            // RIFF chunk descriptor
-            writeString('RIFF');
-            writeUint32(36 + pcmData.byteLength);
-            writeString('WAVE');
-
-            // FMT sub-chunk
-            writeString('fmt ');
-            writeUint32(16); // Sub-chunk size (16 for PCM)
-            writeUint16(1);  // Audio Format (1 for PCM)
-            writeUint16(1);  // Number of channels (Mono)
-            writeUint32(sampleRate);
-            writeUint32(sampleRate * 1 * 2); // Byte rate (SampleRate * Channels * Bits/8)
-            writeUint16(1 * 2); // Block alignment
-            writeUint16(16); // Bits per sample
-
-            // Data sub-chunk
-            writeString('data');
-            writeUint32(pcmData.byteLength);
-
-            // Write PCM data
-            const pcmBytes = new Uint8Array(pcmData);
-            for (let i = 0; i < pcmData.byteLength; i++) {
-                view.setUint8(offset + i, pcmBytes[i]);
-            }
-
-            return new Blob([buffer], { type: 'audio/wav' });
-        };
-
-        // --- GEMINI API CALLS ---
-
-        async function playTTS(text) {
-            setLoader("🔊 Generating speech...", true, 'playing');
-            setAudioControls(false);
 
             try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${apiKey}`;
-                
-                const payload = {
-                    contents: [{ parts: [{ text: text }] }],
-                    generationConfig: {
-                        responseModalities: ["AUDIO"],
-                        speechConfig: {
-                            voiceConfig: {
-                                // Use the dynamically selected voice name
-                                prebuiltVoiceConfig: { voiceName: selectedVoiceName } 
-                            }
-                        }
-                    },
-                    model: TTS_MODEL
-                };
+                const result = await fetchWithRetry(apiUrl, payload);
+                const candidate = result.candidates?.[0];
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioDataB64 = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
-
-                if (audioDataB64 && mimeType && mimeType.startsWith("audio/")) {
-                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                    if (!sampleRateMatch) {
-                        throw new Error("Could not parse sample rate from audio MIME type.");
-                    }
-                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const botResponse = candidate.content.parts[0].text;
                     
-                    const pcmDataBuffer = base64ToArrayBuffer(audioDataB64);
-                    const wavBlob = pcmToWav(pcmDataBuffer, sampleRate);
-                    const audioUrl = URL.createObjectURL(wavBlob);
-
-                    const response = await fetch(audioUrl);
-                    const audioBuffer = await response.arrayBuffer();
+                    // 4. Display bot response
+                    addMessage(botResponse, 'bot');
                     
-                    if (audioContext.state === 'suspended') {
-                        await audioContext.resume();
-                    }
-
-                    const source = audioContext.createBufferSource();
-                    source.buffer = await audioContext.decodeAudioData(audioBuffer);
-                    source.connect(audioContext.destination);
-                    source.start(0);
-
-                    source.onended = () => {
-                        URL.revokeObjectURL(audioUrl);
-                        setLoader("", false);
-                        setAudioControls(true);
-                    };
-                    setLoader("🔊 Playing audio...", true, 'playing');
+                    // 5. Add bot response to history
+                    chatHistory.push({ role: "model", parts: [{ text: botResponse }] });
                 } else {
-                    throw new Error("TTS response was missing audio data.");
+                    addMessage("I received an empty response. Please try again.", 'bot');
+                    console.error("Empty response received from API:", result);
                 }
 
             } catch (error) {
-                console.error("TTS Playback Error:", error);
-                setLoader(`❌ TTS Error. See console.`, true, 'error');
-                setTimeout(() => setLoader("", false), 3000);
-            }
-        }
+                // 6. Handle errors (e.g., network, 403, bad response)
+                console.error("Fatal Error during chat:", error);
+                errorMessage.textContent = error.message.includes("403") 
+                    ? "Error 403: API Key is invalid or restricted. Please check your key permissions."
+                    : "A network or API error occurred. Check console for details.";
+                errorMessage.classList.remove('hidden');
 
-        async function generateImage(prompt) {
-            document.getElementById('image-display').classList.add('hidden');
-            setLoader("🖼️ Generating image...", true, 'thinking');
-
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_MODEL}:generateContent?key=${apiKey}`;
-                
-                const payload = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        responseModalities: ['TEXT', 'IMAGE'],
-                        imageConfig: {
-                            aspectRatio: "1:1" 
-                        }
-                    },
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const result = await response.json();
-                
-                const textResponse = result?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text || "Image generation complete.";
-                const imagePart = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-                const base64Data = imagePart?.inlineData?.data;
-                
-                appendMessage('gemini', textResponse);
-
-                if (base64Data) {
-                    const imageUrl = `data:image/png;base64,${base64Data}`;
-                    const imgElement = document.getElementById('generated-image-output');
-                    imgElement.src = imageUrl;
-                    document.getElementById('image-display').classList.remove('hidden');
-                    
-                } else {
-                    appendMessage('gemini', "⚠️ Warning: Image could not be generated. Prompt may violate safety policies.", false);
-                }
-
-            } catch (error) {
-                console.error("Image Generation Error:", error);
-                appendMessage('gemini', `❌ Error generating image: ${error.message}`, false);
+                // If error, remove the last user message from history so it doesn't confuse future context
+                chatHistory.pop(); 
             } finally {
-                setLoader("", false);
+                // 7. Reset UI state
+                setUiState(false);
             }
         }
-        
-        async function generateTextAndCheckIntent(userPrompt) {
-            setLoader("🤖 Thinking...", true, 'thinking');
-            setAudioControls(false);
-
-            // Update System Instruction
-            systemInstruction = (
-                `You are a helpful and friendly assistant named ${ASSISTANT_NAME}. All your responses must be ` +
-                `in the **${selectedLanguage}** language. Maintain a consistent tone. ` +
-                `CRITICAL NLU RULE: If the user explicitly asks you to tell, say, or read the response, ` +
-                `you must include the special tag '${INTENT_TAG}' at the very end of your text response, ` +
-                `without any other text after it. For all other requests, do not include this tag.`
-            );
-
-            // 1. Prepare the API payload content with history
-            // We clone to ensure we aren't modifying the live chatHistory before the call is complete
-            const contents = JSON.parse(JSON.stringify(chatHistory));
-            
-            // 2. Prepare the current user parts (Image + Text)
-            const userParts = [];
-            
-            if (selectedImageBase64) {
-                userParts.push({
-                    inlineData: {
-                        mimeType: selectedImageMimeType,
-                        data: selectedImageBase64
-                    }
-                });
-            }
-            userParts.push({ text: userPrompt });
-
-            // 3. Add the full user turn (including vision) to the API payload
-            contents.push({ role: "user", parts: userParts });
-
-            // 4. Clear selected image state after adding it to the current payload
-            clearImage(); 
-
-            try {
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${VISION_MODEL}:generateContent?key=${apiKey}`;
-                
-                const payload = {
-                    contents: contents, 
-                    systemInstruction: { parts: [{ text: systemInstruction }] },
-                };
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (text) {
-                    // 5. Update simple chatHistory (for current session context)
-                    // The history is appended here, so the index will be (chatHistory.length) and (chatHistory.length + 1)
-                    const userMessageIndex = chatHistory.length;
-                    
-                    chatHistory.push({ role: "user", parts: [{ text: userPrompt }] }); 
-                    chatHistory.push({ role: "model", parts: [{ text: text }] });
-                    
-                    // 6. Save the chat session and potentially update the title
-                    if (chatHistory.length === 2) { // First exchange
-                        const newTitle = userPrompt.length > 50 ? userPrompt.substring(0, 50) + '...' : userPrompt;
-                        saveChat(newTitle); 
-                    } else {
-                        saveChat(null); // Just saves history, keeps existing title
-                    }
-                    
-                    lastResponseText = text.replace(INTENT_TAG, "").trim();
-                    
-                    // Append messages to UI
-                    // Re-render the user message with the correct index (it was already rendered without the index)
-                    const messagesContainer = document.getElementById('chat-messages');
-                    messagesContainer.removeChild(messagesContainer.lastChild);
-                    appendMessage('user', userPrompt, false, true, userMessageIndex);
-
-                    // Append the model message
-                    appendMessage('gemini', lastResponseText);
-
-                    if (text.includes(INTENT_TAG)) {
-                        await playTTS(lastResponseText);
-                    } else {
-                        setAudioControls(true);
-                    }
-                } else {
-                    appendMessage('gemini', `I'm sorry, I couldn't generate a response. Please check the network.`, false);
-                }
-
-            } catch (error) {
-                console.error("Chat Generation Error:", error);
-                appendMessage('gemini', `❌ An error occurred during the chat: ${error.message}`, false);
-            } finally {
-                setLoader("", false);
-            }
-        }
-
-
-        // --- MAIN ENTRY POINT ---
-
-        function handleSend(transcribedText = null) {
-            const inputElement = document.getElementById('user-input');
-            const prompt = transcribedText || inputElement.value.trim();
-            const hasImage = selectedImageBase64 !== null;
-
-            if (!prompt && !hasImage) return;
-
-            if (!transcribedText) inputElement.value = '';
-
-            let displayPrompt = prompt;
-            if (hasImage) {
-                displayPrompt = `[Image: ${document.getElementById('image-filename').textContent}] ${prompt}`;
-            }
-            
-            // Temporary append while waiting for response (will be replaced by indexed version later)
-            appendMessage('user', displayPrompt, false, true, null); 
-            
-            setAudioControls(false); 
-
-            const imageCommandPrefix = "generate image of";
-            if (prompt.toLowerCase().startsWith(imageCommandPrefix) && !hasImage) {
-                const imagePrompt = prompt.substring(imageCommandPrefix.length).trim();
-                generateImage(imagePrompt);
-                return;
-            }
-
-            generateTextAndCheckIntent(prompt);
-        }
-
-        // --- HOTKEY IMPLEMENTATION ---
-        document.addEventListener('keydown', (e) => {
-            // Hotkey: Ctrl + Alt + U
-            if (e.key.toLowerCase() === 'u' && e.altKey && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                document.getElementById('user-input').focus();
-            }
-        });
-
-        // Initialize on load
-        window.onload = () => {
-            // 1. Load all history
-            loadHistory();
-
-            // 2. Start a new chat session OR load the first existing one
-            if (chats.length > 0) {
-                loadChat(chats[0].id);
-            } else {
-                startNewChat(); 
-            }
-
-            // 3. Setup event listener
-            document.getElementById('user-input').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handleSend();
-                }
-            });
-            
-            // 4. Initial sidebar state (minimized on small screens)
-            if (window.innerWidth < 768) {
-                isSidebarOpen = false;
-                toggleSidebar();
-            }
-        };
-        
     </script>
 </body>
 </html>
